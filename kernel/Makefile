@@ -56,7 +56,7 @@ obj-$(CONFIG_FREEZER) += freezer.o
 obj-$(CONFIG_PROFILING) += profile.o
 obj-$(CONFIG_STACKTRACE) += stacktrace.o
 obj-y += time/
-obj-$(CONFIG_FUTEX) += futex.o
+obj-$(CONFIG_FUTEX) += futex/
 obj-$(CONFIG_GENERIC_ISA_DMA) += dma.o
 obj-$(CONFIG_SMP) += smp.o
 ifneq ($(CONFIG_SMP),y)
@@ -147,7 +147,7 @@ $(obj)/config_data.gz: $(obj)/config_data FORCE
 
 filechk_cat = cat $<
 
-$(obj)/config_data: arch/arm64/configs/kalama-gki_defconfig FORCE
+$(obj)/config_data: $(KCONFIG_CONFIG) FORCE
 	$(call filechk,cat)
 
 $(obj)/kheaders.o: $(obj)/kheaders_data.tar.xz
