@@ -82,6 +82,11 @@ struct conntrack_gc_work {
 
 static __read_mostly struct kmem_cache *nf_conntrack_cachep;
 static DEFINE_SPINLOCK(nf_conntrack_locks_all_lock);
+// SEC_PRODUCT_FEATURE_KNOX_SUPPORT_NPA {
+#ifdef CONFIG_KNOX_NCM
+static DEFINE_SPINLOCK(knox_nf_conntrack);
+#endif
+// SEC_PRODUCT_FEATURE_KNOX_SUPPORT_NPA }
 static __read_mostly bool nf_conntrack_locks_all;
 
 /* serialize hash resizes and nf_ct_iterate_cleanup */
@@ -103,8 +108,8 @@ static DEFINE_MUTEX(nf_conntrack_mutex);
 #define GC_SCAN_MAX_DURATION	msecs_to_jiffies(10)
 #define GC_SCAN_EXPIRED_MAX	(64000u / HZ)
 
-#define MIN_CHAINLEN	8u
-#define MAX_CHAINLEN	(32u - MIN_CHAINLEN)
+#define MIN_CHAINLEN	50u
+#define MAX_CHAINLEN	(80u - MIN_CHAINLEN)
 
 static struct conntrack_gc_work conntrack_gc_work;
 
@@ -649,10 +654,13 @@ void nf_ct_destroy(struct nf_conntrack *nfct)
 
     // SEC_PRODUCT_FEATURE_KNOX_SUPPORT_NPA {
 #ifdef CONFIG_KNOX_NCM
+	unsigned long flags;
+	spin_lock_irqsave(&knox_nf_conntrack,flags);
 	if (NF_CONN_NPA_VENDOR_DATA_GET(ct)) {
 		kfree(NF_CONN_NPA_VENDOR_DATA_GET(ct));
 		ct->android_oem_data1 = (u64)NULL;
 	}
+	spin_unlock_irqrestore(&knox_nf_conntrack,flags);
 #endif
 	// SEC_PRODUCT_FEATURE_KNOX_SUPPORT_NPA }
 	pr_debug("%s(%p)\n", __func__, ct);
@@ -1604,11 +1612,11 @@ early_exit:
 	if (next_run)
 		gc_work->early_drop = false;
 	// SEC_PRODUCT_FEATURE_KNOX_SUPPORT_NPA {
-#ifdef CONFIG_KNOX_NCM
+	#ifdef CONFIG_KNOX_NCM
 	if ( (check_ncm_flag()) && (check_intermediate_flag()) ) {
 		next_run = 0;
 	}
-#endif
+	#endif
 	// SEC_PRODUCT_FEATURE_KNOX_SUPPORT_NPA }
 
 	queue_delayed_work(system_power_efficient_wq, &gc_work->dwork, next_run);
@@ -1725,10 +1733,13 @@ void nf_conntrack_free(struct nf_conn *ct)
 	smp_mb__before_atomic();
 	// SEC_PRODUCT_FEATURE_KNOX_SUPPORT_NPA {
 #ifdef CONFIG_KNOX_NCM
+	unsigned long flags;
+	spin_lock_irqsave(&knox_nf_conntrack,flags);
 	if (NF_CONN_NPA_VENDOR_DATA_GET(ct)) {
 		kfree(NF_CONN_NPA_VENDOR_DATA_GET(ct));
 		ct->android_oem_data1 = (u64)NULL;
 	}
+	spin_unlock_irqrestore(&knox_nf_conntrack,flags);
 #endif
 	// SEC_PRODUCT_FEATURE_KNOX_SUPPORT_NPA }
 	trace_android_rvh_nf_conn_free(ct);
@@ -2294,6 +2305,9 @@ static int nf_confirm_cthelper(struct sk_buff *skb, struct nf_conn *ct,
 		return 0;
 
 	helper = rcu_dereference(help->helper);
+	if (!helper)
+		return 0;
+
 	if (!(helper->flags & NF_CT_HELPER_F_USERSPACE))
 		return 0;
 
