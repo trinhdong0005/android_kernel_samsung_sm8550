@@ -650,11 +650,11 @@ static void destroy_gre_conntrack(struct nf_conn *ct)
 
 void nf_ct_destroy(struct nf_conntrack *nfct)
 {
-	unsigned long flags;
 	struct nf_conn *ct = (struct nf_conn *)nfct;
 
     // SEC_PRODUCT_FEATURE_KNOX_SUPPORT_NPA {
 #ifdef CONFIG_KNOX_NCM
+	unsigned long flags;
 	spin_lock_irqsave(&knox_nf_conntrack,flags);
 	if (NF_CONN_NPA_VENDOR_DATA_GET(ct)) {
 		kfree(NF_CONN_NPA_VENDOR_DATA_GET(ct));
@@ -1612,9 +1612,11 @@ early_exit:
 	if (next_run)
 		gc_work->early_drop = false;
 	// SEC_PRODUCT_FEATURE_KNOX_SUPPORT_NPA {
+#ifdef CONFIG_KNOX_NCM
 	if ( (check_ncm_flag()) && (check_intermediate_flag()) ) {
 		next_run = 0;
 	}
+#endif
 	// SEC_PRODUCT_FEATURE_KNOX_SUPPORT_NPA }
 
 	queue_delayed_work(system_power_efficient_wq, &gc_work->dwork, next_run);
@@ -1716,7 +1718,9 @@ EXPORT_SYMBOL_GPL(nf_conntrack_alloc);
 
 void nf_conntrack_free(struct nf_conn *ct)
 {
+#ifdef CONFIG_KNOX_NCM
 	unsigned long flags;
+#endif
 	struct net *net = nf_ct_net(ct);
 	struct nf_conntrack_net *cnet;
 
