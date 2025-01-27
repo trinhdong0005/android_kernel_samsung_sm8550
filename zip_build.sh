@@ -1,15 +1,16 @@
 #!/bin/bash
 
+ANY_KERNEL3_DIR="$HOME/tools/AnyKernel3"
 PARENT_DIR=`readlink -f ..`
 OUT_DIR=`readlink -f .`/out
 
-if [ ! -d $PARENT_DIR/AnyKernel3 ]; then
+if [ ! -d $ANY_KERNEL3_DIR ]; then
     echo 'clone AnyKernel3 - Flashable Zip Template'
-    git clone https://github.com/osm0sis/AnyKernel3 $PARENT_DIR/AnyKernel3
+    git clone https://github.com/osm0sis/AnyKernel3 $ANY_KERNEL3_DIR
 fi
 
 if [ -e $OUT_DIR/arch/arm64/boot/Image ]; then
-    cd $PARENT_DIR/AnyKernel3
+    cd $ANY_KERNEL3_DIR
     git reset --hard
     cp $OUT_DIR/arch/arm64/boot/Image zImage
     sed -i "s/ExampleKernel by osm0sis/kalama ksu kernel/g" anykernel.sh
